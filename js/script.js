@@ -1,10 +1,7 @@
-const d = document;
+import { mostrarSpinner, limpiarHTML, lightMode, darkMode, activarModoOscuro, crearPaginador, mostrarError } from './funciones.js';
+import { d, ls, $darkBtn, $loader, $mainContent, $paginacionDiv, $inputCountry, $selectCountries } from './variables.js';
+
 let url = `https://restcountries.eu/rest/v2/all`;
-const $mainContent = d.querySelector('#main-content');
-const $paginacionDiv = d.querySelector('#paginacion');
-const $inputCountry = d.querySelector('#country');
-const $selectCountries = d.querySelector('#countries');
-const $loader = d.querySelector('.loader');
 let numXPagina = 8;
 if(window.matchMedia('(min-width: 80rem)').matches){
   numXPagina = 8;
@@ -17,9 +14,7 @@ let totalPaginas;
 let paginaActual = 1;
 let inicio = 0;
 let fin = inicio + numXPagina;
-const $darkBtn = d.querySelector('.dark-mode-btn');
 let darkModeTheme = false;
-const ls = localStorage;
 
 d.addEventListener('DOMContentLoaded', e => {
   if(ls.getItem('theme') === null) ls.setItem('theme', 'light');
@@ -34,7 +29,7 @@ d.addEventListener('DOMContentLoaded', e => {
   cargarPaises(inicio, fin, url);
 });
 
-$darkBtn.addEventListener('click', activarModoOscuro);
+$darkBtn.addEventListener('click', cambioModo);
 
 $selectCountries.addEventListener('change', e => {
   url = `https://restcountries.eu/rest/v2/region/${e.target.value}`;
@@ -55,14 +50,14 @@ $inputCountry.addEventListener('input', e => {
 })
 
 async function cargarPaises(inicio, fin, url) {
-  mostrarSpinner();
+  mostrarSpinner(darkModeTheme, $mainContent);
   try {
     const response = await fetch(url);
     const data = await response.json();
     if(data.status === 404){
       totalPaginas = 1;
-      mostrarError();
-      limpiarPaginador();
+      mostrarError($mainContent);
+      limpiarHTML($paginacionDiv);
       imprimirPaginador();
     }else{
       totalPaginas = Math.ceil(data.length / numXPagina);
@@ -73,16 +68,8 @@ async function cargarPaises(inicio, fin, url) {
   }
 }
 
-function mostrarError() {
-  limpiarHTML();
-  const $h3 = d.createElement('h3');
-  $h3.classList.add('error', 'text-center', 'p-1', 'text-white-1');
-  $h3.textContent = 'No fue posible encontrar países con dicho nombre.'
-  $mainContent.appendChild($h3);
-}
-
 function mostrarDatos(data) {
-  limpiarHTML();
+  limpiarHTML($mainContent);
   const $fragment = d.createDocumentFragment();
   data.forEach(pais => {
     const { name, population, region, capital } = pais;
@@ -114,27 +101,13 @@ function mostrarDatos(data) {
   })
   $loader.style.display ='none'
   $mainContent.appendChild($fragment);
-  limpiarPaginador();
+  limpiarHTML($paginacionDiv);
   imprimirPaginador();
 
 }
-const limpiarPaginador = () => {
-  while($paginacionDiv.firstChild) {
-    $paginacionDiv.removeChild($paginacionDiv.firstChild)
-  }
-}
-const limpiarHTML = () => {
-  while($mainContent.firstChild){
-    $mainContent.removeChild($mainContent.firstChild);
-  }
-}
-function *crearPaginador(total) {
-  for (let i = 1; i <= total; i++ ) {
-      yield i;
-  }
-}
+
 function imprimirPaginador() {
-  iterador = crearPaginador(totalPaginas);
+  let iterador = crearPaginador(totalPaginas);
   const $fragment = d.createDocumentFragment();
   let fin = false;
   while(!fin) {
@@ -152,8 +125,8 @@ function imprimirPaginador() {
           paginaActual = value;
           inicio = (paginaActual - 1) * numXPagina;
           fin = inicio + numXPagina;
-          limpiarHTML();
-          mostrarSpinner();
+          limpiarHTML($mainContent);
+          mostrarSpinner(darkModeTheme, $mainContent);
           cargarPaises(inicio, fin, url);
         }
         $fragment.appendChild(boton);
@@ -161,69 +134,6 @@ function imprimirPaginador() {
   }
   $paginacionDiv.appendChild($fragment);
 }
-
-function mostrarSpinner() {
-  limpiarHTML();
-  $loader.style = 'display: block;'
-  
-  if(darkModeTheme){
-    $loader.innerHTML = `
-    <div class="sk-circle">
-      <div class="sk-circle1 sk-child-2"></div>
-      <div class="sk-circle2 sk-child-2"></div>
-      <div class="sk-circle3 sk-child-2"></div>
-      <div class="sk-circle4 sk-child-2"></div>
-      <div class="sk-circle5 sk-child-2"></div>
-      <div class="sk-circle6 sk-child-2"></div>
-      <div class="sk-circle7 sk-child-2"></div>
-      <div class="sk-circle8 sk-child-2"></div>
-      <div class="sk-circle9 sk-child-2"></div>
-      <div class="sk-circle10 sk-child-2"></div>
-      <div class="sk-circle11 sk-child-2"></div>
-      <div class="sk-circle12 sk-child-2"></div>
-    </div>
-    `;
-  }else{
-    $loader.innerHTML = `
-    <div class="sk-circle">
-      <div class="sk-circle1 sk-child"></div>
-      <div class="sk-circle2 sk-child"></div>
-      <div class="sk-circle3 sk-child"></div>
-      <div class="sk-circle4 sk-child"></div>
-      <div class="sk-circle5 sk-child"></div>
-      <div class="sk-circle6 sk-child"></div>
-      <div class="sk-circle7 sk-child"></div>
-      <div class="sk-circle8 sk-child"></div>
-      <div class="sk-circle9 sk-child"></div>
-      <div class="sk-circle10 sk-child"></div>
-      <div class="sk-circle11 sk-child"></div>
-      <div class="sk-circle12 sk-child"></div>
-    </div>
-    `;
-  }
-}
-
-function activarModoOscuro() {
-  if(!darkModeTheme){
-    darkModeTheme = true
-    darkMode();
-    ls.setItem('theme', 'dark')
-  }else{
-    darkModeTheme = false;
-    lightMode();
-    ls.setItem('theme', 'light');
-  }
-}
-function lightMode() {
-  const $selectores = d.querySelectorAll('[data-dark]');
-  const $selectoresCard = d.querySelectorAll('[data-dark-card]');
-  $selectores.forEach(el => el.classList.remove('dark-mode-class'))
-  $selectoresCard.forEach(el => el.classList.remove('dark-mode-card'))
-}
-
-function darkMode() {
-  const $selectores = d.querySelectorAll('[data-dark]');
-  const $selectoresCard = d.querySelectorAll('[data-dark-card]');
-  $selectores.forEach(el => el.classList.add('dark-mode-class'))
-  $selectoresCard.forEach(el => el.classList.add('dark-mode-card'))
+function cambioModo() {
+  darkModeTheme = activarModoOscuro(darkModeTheme);
 }

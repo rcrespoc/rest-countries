@@ -1,33 +1,22 @@
-const d = document;
-let searchParagram = new URLSearchParams(window.location.search);
-const $detailCountry = d.querySelector('main.detail-country');
-const $loader = d.querySelector('.loader');
-const $darkBtn = d.querySelector('.dark-mode-btn');
+import { mostrarSpinner, limpiarHTML, lightMode, darkMode, activarModoOscuro } from './funciones.js';
+import { d, ls, $darkBtn, $loader, $detailCountry, searchParagram } from './variables.js';
+
 let darkModeTheme = false;
-const ls = localStorage;
 
 d.addEventListener('DOMContentLoaded', async e => {
   if(ls.getItem('theme') === null) ls.setItem('theme', 'light');
-  if(ls.getItem('theme') === 'light'){
-    darkModeTheme = false;
-    lightMode();
-  };
-  if(ls.getItem('theme') === 'dark'){
-    darkModeTheme = true;
-    darkMode();
-  }
+  if(ls.getItem('theme') === 'light') darkModeTheme = lightMode();
+  if(ls.getItem('theme') === 'dark') darkModeTheme = darkMode();
   let pais = searchParagram.get('pais');
-  const url = `https://restcountries.eu/rest/v2/name/${pais}`;
+  const url = `https://restcountries.eu/rest/v2/name/${pais}?fullText=true`;
   const dataPais = await buscarPais(url);
   dibujarHTML(...dataPais);
-
-  
 })
 
-$darkBtn.addEventListener('click', activarModoOscuro);
+$darkBtn.addEventListener('click', cambioModo);
 
 async function buscarPais(url) {
-  mostrarSpinner();
+  mostrarSpinner(darkModeTheme, $detailCountry);
   try{
     const response = await fetch(url);
     const data = await response.json();
@@ -38,7 +27,7 @@ async function buscarPais(url) {
 }
 
 async function dibujarHTML(pais) {
-  limpiarHTML();
+  limpiarHTML($detailCountry);
   const { flag, name, nativeName, population, region, subregion, capital, topLevelDomain, currencies, languages, borders} = pais;
   let $tld = topLevelDomain.reduce((a, b) => a+', '+b);
   let $currencies = '';
@@ -77,7 +66,7 @@ async function dibujarHTML(pais) {
   $h1Title.textContent = name;
   $divInfo1.innerHTML = `
     <p class="py-0-5"><strong>Native Name: </strong>${nativeName}</p>
-    <p class="py-0-5"><strong>Population: </strong>${population}</p>
+    <p class="py-0-5"><strong>Population: </strong>${Intl.NumberFormat('de-DE').format(population)}</p>
     <p class="py-0-5"><strong>Region: </strong>${region}</p>
     <p class="py-0-5"><strong>Sub Region: </strong>${subregion}</p>
     <p class="py-0-5"><strong>Capital: </strong>${capital}</p>
@@ -89,7 +78,7 @@ async function dibujarHTML(pais) {
   `;
   $h2Title.textContent = 'Border Countries'
   let $borders = await buscarNombres(borders);
-    $borders.forEach( el => {
+  $borders.forEach( el => {
     const a = d.createElement('a');
     a.href=`#`;
     a.textContent = el;
@@ -97,7 +86,7 @@ async function dibujarHTML(pais) {
     if(darkModeTheme) a.classList.add('dark-mode-card');
     a.setAttribute('data-dark-card','')
     a.onclick = async () => {
-      const url = `https://restcountries.eu/rest/v2/name/${el}`;
+      const url = `https://restcountries.eu/rest/v2/name/${el}?fullText=true`;
       const dataPais = await buscarPais(url);
       dibujarHTML(...dataPais);
     }
@@ -124,89 +113,16 @@ async function dibujarHTML(pais) {
 async function buscarNombres(data) {
   const borders = [];
   let url2 = `https://restcountries.eu/rest/v2/alpha?codes=`;
-  data.forEach( el => {
-    url2+=el+';';
-  });
+  data.forEach( el => url2+=el+';');
   try {
     const response = await fetch(url2);
     const datos = await response.json();
-    datos.forEach(el => {
-      borders.push(el.name);
-    })
+    datos.forEach(el => borders.push(el.name));
   } catch (error) {
     
   }
   return borders;
 }
-
-function mostrarSpinner() {
-  limpiarHTML();
-  $loader.style = 'display: block;'
-  if(darkModeTheme){
-    $loader.innerHTML = `
-    <div class="sk-circle">
-      <div class="sk-circle1 sk-child-2"></div>
-      <div class="sk-circle2 sk-child-2"></div>
-      <div class="sk-circle3 sk-child-2"></div>
-      <div class="sk-circle4 sk-child-2"></div>
-      <div class="sk-circle5 sk-child-2"></div>
-      <div class="sk-circle6 sk-child-2"></div>
-      <div class="sk-circle7 sk-child-2"></div>
-      <div class="sk-circle8 sk-child-2"></div>
-      <div class="sk-circle9 sk-child-2"></div>
-      <div class="sk-circle10 sk-child-2"></div>
-      <div class="sk-circle11 sk-child-2"></div>
-      <div class="sk-circle12 sk-child-2"></div>
-    </div>
-    `;
-  }else{
-    $loader.innerHTML = `
-    <div class="sk-circle">
-      <div class="sk-circle1 sk-child"></div>
-      <div class="sk-circle2 sk-child"></div>
-      <div class="sk-circle3 sk-child"></div>
-      <div class="sk-circle4 sk-child"></div>
-      <div class="sk-circle5 sk-child"></div>
-      <div class="sk-circle6 sk-child"></div>
-      <div class="sk-circle7 sk-child"></div>
-      <div class="sk-circle8 sk-child"></div>
-      <div class="sk-circle9 sk-child"></div>
-      <div class="sk-circle10 sk-child"></div>
-      <div class="sk-circle11 sk-child"></div>
-      <div class="sk-circle12 sk-child"></div>
-    </div>
-    `;
-  }
-}
-
-const limpiarHTML = () => {
-  while($detailCountry.firstChild){
-    $detailCountry.removeChild($detailCountry.firstChild);
-  }
-}
-
-
-function activarModoOscuro() {
-  if(!darkModeTheme){
-    darkModeTheme = true
-    darkMode();
-    ls.setItem('theme', 'dark')
-  }else{
-    darkModeTheme = false;
-    lightMode();
-    ls.setItem('theme', 'light');
-  }
-}
-function lightMode() {
-  const $selectores = d.querySelectorAll('[data-dark]');
-  const $selectoresCard = d.querySelectorAll('[data-dark-card]');
-  $selectores.forEach(el => el.classList.remove('dark-mode-class'))
-  $selectoresCard.forEach(el => el.classList.remove('dark-mode-card'))
-}
-
-function darkMode() {
-  const $selectores = d.querySelectorAll('[data-dark]');
-  const $selectoresCard = d.querySelectorAll('[data-dark-card]');
-  $selectores.forEach(el => el.classList.add('dark-mode-class'))
-  $selectoresCard.forEach(el => el.classList.add('dark-mode-card'))
+function cambioModo() {
+  darkModeTheme = activarModoOscuro(darkModeTheme);
 }
